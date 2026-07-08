@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Hojas de Stickers</title>
+<style data-style="print"></style>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F0EDE8;
+    --surface: #FFFFFF;
+    --border: #D0C9C0;
+    --accent: #2B4C7E;
+    --accent-light: #E8EDF5;
+    --text: #1A1A1A;
+    --muted: #6B6560;
+    --danger: #C0392B;
+    --font-ui: 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'Courier New', monospace;
+    --radius: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 18px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: .02em; }
+  header span { font-size: .8rem; opacity: .65; letter-spacing: .05em; text-transform: uppercase; }
+
+  /* ─── LAYOUT ─── */
+  .app {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ─── PANEL ─── */
+  .panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-label {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .field-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  input[type="number"], textarea {
+    font-family: var(--font-ui);
+    font-size: .85rem;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  input[type="number"]:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(43,76,126,.12);
+  }
+
+  textarea {
+    font-family: var(--font-mono);
+    font-size: .82rem;
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.6;
+  }
+
+  .hint {
+    font-size: .7rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+  }
+
+  .btn-generate {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 11px 20px;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: .02em;
+    transition: background .15s, transform .1s;
+    width: 100%;
+  }
+  .btn-generate:hover { background: #1d3a65; }
+  .btn-generate:active { transform: scale(.98); }
+
+  .btn-print {
+    background: transparent;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 9px 20px;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: .02em;
+    transition: background .15s;
+    width: 100%;
+    display: none;
+  }
+  .btn-print:hover { background: var(--accent-light); }
+
+  .stats {
+    font-size: .75rem;
+    color: var(--muted);
+    padding: 8px 10px;
+    background: var(--accent-light);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent);
+    display: none;
+  }
+
+  /* ─── PREVIEW AREA ─── */
+  .preview-area {
+    padding: 32px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .empty-state {
+    margin: auto;
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty-state svg { margin-bottom: 16px; opacity: .35; }
+  .empty-state p { font-size: .9rem; }
+
+  /* ─── SHEET ─── */
+  .sheet-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .sheet-label {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .sheet {
+    background: #fff;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sticker {
+    border-radius: 5px;
+    border: 2px dashed #e6e6e6;
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    text-align: center;
+    padding: 2px;
+  }
+
+  .sticker-text {
+    font-weight: 700;
+    color: #000;
+    line-height: 1.1;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sticker-empty {
+    border: 1px dashed #DDD;
+    background: #FAFAFA;
+  }
+
+  .sticker-qr {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* ─── PRINT ─── */
+  @media print {
+    header, .panel, .sheet-label, .preview-area > .empty-state { display: none !important; }
+    body { background: #fff !important; }
+    .app { display: block; }
+    .preview-area {
+      padding: 0;
+      gap: 0;
+    }
+    .sheet-wrapper { page-break-after: always; align-items: flex-start; }
+    .sheet-wrapper:last-child { page-break-after: auto; }
+    .sheet {
+      box-shadow: none !important;
+      margin: 0 !important;
+    }
+    .sticker {
+      border: 0 !important;
+    }
+    .sticker-empty { display: none !important; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>Generador de Hojas de Stickers</h1>
+  <span>Vista previa + impresión</span>
+</header>
+
+<div class="app">
+
+  <!-- ─── PANEL DE CONFIGURACIÓN ─── -->
+  <aside class="panel">
+
+    <div>
+      <div class="section-label">Tamaño de la hoja</div>
+      <div class="field-group">
+        <div class="field">
+          <label>Ancho (cm)</label>
+          <input type="number" id="sheetW" value="15.5" step="0.1" min="1">
+        </div>
+        <div class="field">
+          <label>Alto (cm)</label>
+          <input type="number" id="sheetH" value="11.2" step="0.1" min="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">Distribución de stickers</div>
+      <div class="field-group">
+        <div class="field">
+          <label>Columnas</label>
+          <input type="number" id="cols" value="6" min="1" max="30">
+        </div>
+        <div class="field">
+          <label>Filas</label>
+          <input type="number" id="rows" value="11" min="1" max="50">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">Tamaño de cada sticker</div>
+      <div class="field-group">
+        <div class="field">
+          <label>Ancho (cm)</label>
+          <input type="number" id="stickerW" value="2" step="0.01" min="0.1">
+        </div>
+        <div class="field">
+          <label>Alto (cm)</label>
+          <input type="number" id="stickerH" value="0.7" step="0.01" min="0.1">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">Separación entre stickers</div>
+      <div class="field-group">
+        <div class="field">
+          <label>Horizontal (cm)</label>
+          <input type="number" id="gapX" value="0.6" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>Vertical (cm)</label>
+          <input type="number" id="gapY" value="0.25" step="0.01" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">Desplazamiento del primer sticker</div>
+      <div class="field-group">
+        <div class="field">
+          <label>Horizontal (cm)</label>
+          <input type="number" id="offsetX" value="0.2" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>Vertical (cm)</label>
+          <input type="number" id="offsetY" value="0.4" step="0.01" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">Contenido de stickers</div>
+      <div class="field">
+        <textarea id="content" placeholder="6, 07&#10;3, QR https://ejemplo.com&#10;6, 05"></textarea>
+        <p class="hint">Una línea por tipo: <strong>cantidad, texto</strong> o <strong>cantidad, QR &lt;url o texto&gt;</strong></p>
+        <p class="hint">Use un punto <strong>.</strong> para generar un sticker vacío.</p>
+      </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <button class="btn-generate" onclick="generate()">Generar hojas</button>
+    <button class="btn-print" id="btnPrint" onclick="window.print()">Imprimir</button>
+
+  </aside>
+
+  <!-- ─── ÁREA DE PREVIEW ─── -->
+  <main class="preview-area" id="preview">
+    <div class="empty-state">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="4" width="48" height="56" rx="3" stroke="currentColor" stroke-width="2" fill="none"/>
+        <rect x="16" y="16" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2" fill="none"/>
+        <rect x="32" y="16" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2" fill="none"/>
+        <rect x="16" y="30" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2" fill="none"/>
+        <rect x="32" y="30" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2" fill="none"/>
+        <rect x="16" y="44" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2" fill="none"/>
+        <rect x="32" y="44" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2" fill="none"/>
+      </svg>
+      <p>Configura los parámetros y presiona<br><strong>Generar hojas</strong></p>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ─── UTILIDAD: cm a px (96 dpi = 37.795 px/cm) ───
+const CM = 37.795;
+// const CM = 47.244;
+const cm = v => v * CM;
+
+// ─── CALCULAR TAMAÑO DE TEXTO ÓPTIMO ───
+function fitTextSize(text, widthPx, heightPx) {
+  // Empezamos grande y reducimos hasta que quepa
+  const maxFontSize = Math.min(widthPx, heightPx) * 0.85;
+  const minFontSize = 6;
+  const padding = 2; // px de margen interno
+
+  const availW = widthPx - padding * 2;
+  const availH = heightPx - padding * 2;
+
+  // Crear canvas temporal para medir
+  if (!fitTextSize._canvas) {
+    fitTextSize._canvas = document.createElement('canvas');
+  }
+  const ctx = fitTextSize._canvas.getContext('2d');
+
+  for (let size = maxFontSize; size >= minFontSize; size -= 0.5) {
+    ctx.font = `bold ${size}px 'Segoe UI', system-ui, sans-serif`;
+    const words = text.split(/\s+/);
+    let lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > availW && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    }
+    lines.push(line);
+    const totalH = lines.length * size * 1.2;
+    const maxLineW = Math.max(...lines.map(l => ctx.measureText(l).width));
+    if (maxLineW <= availW && totalH <= availH) {
+      return size;
+    }
+  }
+  return minFontSize;
+}
+
+// ─── PARSEAR CONTENIDO ───
+function parseContent(raw) {
+  const items = [];
+  const lines = raw.trim().split('\n');
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const comma = line.indexOf(',');
+    if (comma === -1) continue;
+    const qty = parseInt(line.slice(0, comma).trim(), 10);
+    const rest = line.slice(comma + 1).trimStart();
+    if (!isNaN(qty) && qty > 0 && rest) {
+      // Detectar si empieza con "QR " seguido de texto
+      const qrMatch = rest.match(/^QR\s+(.+)$/);
+      for (let i = 0; i < qty; i++) {
+        if (qrMatch) {
+          items.push({ type: 'qr', data: qrMatch[1].trim() });
+        } else {
+          console.log('rest', rest);
+          if (rest == '.') {
+            items.push({ type: 'text', data: "" });
+          } else {
+            items.push({ type: 'text', data: rest });
+          }
+        }
+      }
+    }
+  }
+  return items;
+}
+
+// ─── ESCALA VISUAL ───
+// Para que la hoja quepa en pantalla, la escalamos.
+function computeScale(sheetWcm, sheetHcm) {
+  const previewW = document.getElementById('preview').clientWidth - 80;
+  const previewH = window.innerHeight - 130;
+  const scaleW = previewW / cm(sheetWcm);
+  const scaleH = previewH / cm(sheetHcm);
+  return Math.min(scaleW, scaleH, 1); // nunca mayor a 1:1
+}
+
+// ─── GENERAR HOJAS ───
+function generate() {
+  const sheetW  = parseFloat(document.getElementById('sheetW').value);
+  const sheetH  = parseFloat(document.getElementById('sheetH').value);
+  const cols    = parseInt(document.getElementById('cols').value);
+  const rows    = parseInt(document.getElementById('rows').value);
+  const sW      = parseFloat(document.getElementById('stickerW').value);
+  const sH      = parseFloat(document.getElementById('stickerH').value);
+  const gapX    = parseFloat(document.getElementById('gapX').value);
+  const gapY    = parseFloat(document.getElementById('gapY').value);
+  const offX    = parseFloat(document.getElementById('offsetX').value);
+  const offY    = parseFloat(document.getElementById('offsetY').value);
+  const rawContent = document.getElementById('content').value;
+
+  const stickersPerSheet = cols * rows;
+  const items = parseContent(rawContent);
+  const total = items.length;
+
+  if (total === 0) {
+    alert('Ingresa al menos un ítem en el área de contenido.');
+    return;
+  }
+
+  const totalSheets = Math.ceil(total / stickersPerSheet);
+  const scale = computeScale(sheetW, sheetH);
+
+  // Dimensiones en px (reales, sin escalar) para cálculo de texto
+  const sWpx = cm(sW);
+  const sHpx = cm(sH);
+
+  // Construir DOM
+  const preview = document.getElementById('preview');
+  preview.innerHTML = '';
+
+  for (let s = 0; s < totalSheets; s++) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'sheet-wrapper';
+
+    const label = document.createElement('div');
+    label.className = 'sheet-label';
+    label.textContent = `Hoja ${s + 1} de ${totalSheets}`;
+    wrapper.appendChild(label);
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet';
+    sheet.style.width  = (cm(sheetW) * scale) + 'px';
+    sheet.style.height = (cm(sheetH) * scale) + 'px';
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = s * stickersPerSheet + r * cols + c;
+
+        const x = cm(offX + c * (sW + gapX)) * scale;
+        const y = cm(offY + r * (sH + gapY)) * scale;
+
+        const sticker = document.createElement('div');
+        sticker.className = 'sticker';
+        sticker.style.left   = x + 'px';
+        sticker.style.top    = y + 'px';
+        sticker.style.width  = (sWpx * scale) + 'px';
+        sticker.style.height = (sHpx * scale) + 'px';
+
+        if (idx < total) {
+          const item = items[idx];
+
+          if (item.type === 'qr') {
+            // Contenedor para el QR generado por qrcode.js
+            const qrContainer = document.createElement('div');
+            qrContainer.style.width = '100%';
+            qrContainer.style.height = '100%';
+            qrContainer.style.display = 'flex';
+            qrContainer.style.alignItems = 'center';
+            qrContainer.style.justifyContent = 'center';
+
+            // qrcode.js necesita un div con tamaño fijo en px
+            const qrSize = Math.floor(Math.min(sWpx, sHpx) * scale * 0.92);
+            const qrDiv = document.createElement('div');
+            qrContainer.appendChild(qrDiv);
+            sticker.appendChild(qrContainer);
+
+            // Generamos el QR después de añadir al DOM
+            (function(div, data, size) {
+              requestAnimationFrame(() => {
+                try {
+                  new QRCode(div, {
+                    text: data,
+                    width: size,
+                    height: size,
+                    correctLevel: QRCode.CorrectLevel.M
+                  });
+                  // Quitar fondo blanco del canvas/img generado
+                  const img = div.querySelector('img');
+                  if (img) img.style.cssText = 'width:' + size + 'px;height:' + size + 'px;display:block;';
+                  const canvas = div.querySelector('canvas');
+                  if (canvas) canvas.style.cssText = 'width:' + size + 'px;height:' + size + 'px;display:block;';
+                } catch(e) { div.textContent = data; }
+              });
+            })(qrDiv, item.data, qrSize);
+
+          } else {
+            // Texto normal
+            const text = item.data;
+            const fontSize = fitTextSize(text, sWpx, sHpx) * scale;
+
+            const span = document.createElement('div');
+            span.className = 'sticker-text';
+            span.style.fontSize = fontSize + 'px';
+            span.textContent = text;
+            sticker.appendChild(span);
+          }
+        } else {
+          sticker.classList.add('sticker-empty');
+        }
+
+        sheet.appendChild(sticker);
+      }
+    }
+
+    wrapper.appendChild(sheet);
+    preview.appendChild(wrapper);
+  }
+
+  // Actualizar estadísticas
+  const statsEl = document.getElementById('stats');
+  statsEl.style.display = 'block';
+  statsEl.innerHTML = `
+    <strong>${total}</strong> stickers totales &nbsp;·&nbsp;
+    <strong>${stickersPerSheet}</strong> por hoja &nbsp;·&nbsp;
+    <strong>${totalSheets}</strong> hoja${totalSheets !== 1 ? 's' : ''} necesaria${totalSheets !== 1 ? 's' : ''}
+    ${total % stickersPerSheet ? ` &nbsp;·&nbsp; <span style="color:var(--danger)">${stickersPerSheet - (total % stickersPerSheet)} espacio${stickersPerSheet - (total % stickersPerSheet) !== 1 ? 's' : ''} vacío${stickersPerSheet - (total % stickersPerSheet) !== 1 ? 's' : ''} en última hoja</span>` : ''}
+  `;
+
+  // media print style
+  let style_print = document.querySelector('[data-style=print]');
+  style_print.innerHTML = '@page { size: ' + sheetW + 'cm ' + sheetH + 'cm; margin: 0; }';
+
+  document.getElementById('btnPrint').style.display = 'block';
+}
+
+// Auto-generar al cargar con valores por defecto
+window.addEventListener('load', () => {
+  document.getElementById('content').value = '6, 07\n3, QR https://ejemplo.com\n6, 05';
+  generate();
+});
+</script>
+</body>
+</html>
