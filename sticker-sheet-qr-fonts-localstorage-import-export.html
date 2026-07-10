@@ -126,6 +126,69 @@
   .config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .config-hint { min-height: 1.1em; }
 
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,26,26,.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 380px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: var(--radius);
+  }
+  .modal-close:hover { background: var(--accent-light); color: var(--accent); }
+
+  .modal-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .modal-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 14px 0;
+  }
+
   textarea {
     font-family: var(--font-mono);
     font-size: .82rem;
@@ -297,27 +360,7 @@
 
     <div>
       <div class="section-label">Configuraciones guardadas</div>
-      <div class="field full">
-        <label for="configList">Elegir configuración</label>
-        <select id="configList">
-          <option value="">— Selecciona una configuración —</option>
-        </select>
-      </div>
-      <div class="config-row" style="margin-top:6px;">
-        <button type="button" class="btn-secondary" id="btnLoadConfig">Cargar</button>
-        <button type="button" class="btn-secondary danger" id="btnDeleteConfig">Eliminar</button>
-      </div>
-      <div class="field full" style="margin-top:10px;">
-        <label for="configName">Guardar configuración actual como</label>
-        <input type="text" id="configName" placeholder="Ej: Etiquetas frascos">
-      </div>
-      <button type="button" class="btn-secondary" id="btnSaveConfig" style="margin-top:6px;">Guardar configuración actual</button>
-      <div class="config-row" style="margin-top:10px;">
-        <button type="button" class="btn-secondary" id="btnExportConfigs">Exportar todas</button>
-        <button type="button" class="btn-secondary" id="btnImportConfigs">Importar archivo</button>
-      </div>
-      <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
-      <p class="hint config-hint" id="configHint"></p>
+      <button type="button" class="btn-secondary" id="btnOpenConfigModal">Gestionar configuraciones guardadas</button>
     </div>
 
     <div>
@@ -445,6 +488,47 @@
     </div>
   </main>
 
+</div>
+
+<!-- ─── MODAL: CONFIGURACIONES GUARDADAS ─── -->
+<div class="modal-overlay" id="configModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
+    <div class="modal-header">
+      <h2 id="configModalTitle">Configuraciones guardadas</h2>
+      <button type="button" class="modal-close" id="btnCloseConfigModal" aria-label="Cerrar">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="field full">
+        <label for="configList">Elegir configuración</label>
+        <select id="configList">
+          <option value="">— Selecciona una configuración —</option>
+        </select>
+      </div>
+      <div class="config-row" style="margin-top:6px;">
+        <button type="button" class="btn-secondary" id="btnLoadConfig">Cargar</button>
+        <button type="button" class="btn-secondary danger" id="btnDeleteConfig">Eliminar</button>
+      </div>
+
+      <hr class="modal-divider">
+
+      <div class="field full">
+        <label for="configName">Guardar configuración actual como</label>
+        <input type="text" id="configName" placeholder="Ej: Etiquetas frascos">
+      </div>
+      <button type="button" class="btn-secondary" id="btnSaveConfig" style="margin-top:6px;">Guardar configuración actual</button>
+
+      <hr class="modal-divider">
+
+      <div class="config-row">
+        <button type="button" class="btn-secondary" id="btnExportConfigs">Exportar todas</button>
+        <button type="button" class="btn-secondary" id="btnImportConfigs">Importar archivo</button>
+      </div>
+      <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
+
+      <p class="hint config-hint" id="configHint"></p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -910,6 +994,30 @@ function handleImportFile(e) {
 
   reader.readAsText(file);
 }
+
+function openConfigModal() {
+  document.getElementById('configModalOverlay').classList.add('open');
+  setConfigHint('', false);
+}
+
+function closeConfigModal() {
+  document.getElementById('configModalOverlay').classList.remove('open');
+}
+
+document.getElementById('btnOpenConfigModal').addEventListener('click', openConfigModal);
+document.getElementById('btnCloseConfigModal').addEventListener('click', closeConfigModal);
+
+// Cerrar al hacer click fuera del cuadro del modal
+document.getElementById('configModalOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'configModalOverlay') closeConfigModal();
+});
+
+// Cerrar con la tecla Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('configModalOverlay').classList.contains('open')) {
+    closeConfigModal();
+  }
+});
 
 document.getElementById('btnSaveConfig').addEventListener('click', saveCurrentConfig);
 document.getElementById('btnLoadConfig').addEventListener('click', loadSelectedConfig);
