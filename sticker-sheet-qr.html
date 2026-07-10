@@ -88,7 +88,7 @@
     color: var(--muted);
   }
 
-  input[type="number"], textarea {
+  input[type="number"], input[type="text"], textarea, select {
     font-family: var(--font-ui);
     font-size: .85rem;
     padding: 7px 10px;
@@ -99,10 +99,94 @@
     transition: border-color .15s, box-shadow .15s;
     width: 100%;
   }
-  input[type="number"]:focus, textarea:focus {
+  input[type="number"]:focus, input[type="text"]:focus, textarea:focus, select:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(43,76,126,.12);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: .01em;
+    transition: background .15s, border-color .15s;
+    width: 100%;
+  }
+  .btn-secondary:hover { background: var(--accent-light); border-color: var(--accent); }
+
+  .btn-secondary.danger { color: var(--danger); }
+  .btn-secondary.danger:hover { background: #FBEAE8; border-color: var(--danger); }
+
+  .config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .config-hint { min-height: 1.1em; }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,26,26,.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 380px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: var(--radius);
+  }
+  .modal-close:hover { background: var(--accent-light); color: var(--accent); }
+
+  .modal-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .modal-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 14px 0;
   }
 
   textarea {
@@ -275,6 +359,11 @@
   <form class="panel config-form" action="#">
 
     <div>
+      <div class="section-label">Configuraciones guardadas</div>
+      <button type="button" class="btn-secondary" id="btnOpenConfigModal">Gestionar configuraciones guardadas</button>
+    </div>
+
+    <div>
       <div class="section-label">Tamaño de la hoja</div>
       <div class="field-group">
         <div class="field">
@@ -345,6 +434,29 @@
     </div>
 
     <div>
+      <div class="section-label">Tipografía del texto</div>
+      <div class="field full">
+        <label for="fontSelect">Fuente</label>
+        <select id="fontSelect">
+          <option value="'Segoe UI', system-ui, sans-serif">Segoe UI (predeterminada)</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="'Arial Black', sans-serif">Arial Black</option>
+          <option value="Verdana, sans-serif">Verdana</option>
+          <option value="Tahoma, sans-serif">Tahoma</option>
+          <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+          <option value="'Times New Roman', serif">Times New Roman</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="Garamond, serif">Garamond</option>
+          <option value="'Courier New', monospace">Courier New</option>
+          <option value="Consolas, monospace">Consolas</option>
+          <option value="Impact, sans-serif">Impact</option>
+          <option value="'Comic Sans MS', sans-serif">Comic Sans MS</option>
+        </select>
+        <p class="hint" id="fontHint">La lista de arriba es genérica. Presiona el botón para leer las fuentes reales instaladas en tu computadora (el navegador pedirá permiso; funciona en Chrome/Edge).</p>
+      </div>
+    </div>
+
+    <div>
       <div class="section-label">Contenido de stickers</div>
       <div class="field">
         <textarea id="content" placeholder="6, 07&#10;3, QR https://ejemplo.com&#10;6, 05"></textarea>
@@ -378,6 +490,47 @@
 
 </div>
 
+<!-- ─── MODAL: CONFIGURACIONES GUARDADAS ─── -->
+<div class="modal-overlay" id="configModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
+    <div class="modal-header">
+      <h2 id="configModalTitle">Configuraciones guardadas</h2>
+      <button type="button" class="modal-close" id="btnCloseConfigModal" aria-label="Cerrar">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="field full">
+        <label for="configList">Elegir configuración</label>
+        <select id="configList">
+          <option value="">— Selecciona una configuración —</option>
+        </select>
+      </div>
+      <div class="config-row" style="margin-top:6px;">
+        <button type="button" class="btn-secondary" id="btnLoadConfig">Cargar</button>
+        <button type="button" class="btn-secondary danger" id="btnDeleteConfig">Eliminar</button>
+      </div>
+
+      <hr class="modal-divider">
+
+      <div class="field full">
+        <label for="configName">Guardar configuración actual como</label>
+        <input type="text" id="configName" placeholder="Ej: Etiquetas frascos">
+      </div>
+      <button type="button" class="btn-secondary" id="btnSaveConfig" style="margin-top:6px;">Guardar configuración actual</button>
+
+      <hr class="modal-divider">
+
+      <div class="config-row">
+        <button type="button" class="btn-secondary" id="btnExportConfigs">Exportar todas</button>
+        <button type="button" class="btn-secondary" id="btnImportConfigs">Importar archivo</button>
+      </div>
+      <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
+
+      <p class="hint config-hint" id="configHint"></p>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── UTILIDAD: cm a px (96 dpi = 37.795 px/cm) ───
 const CM = 37.795;
@@ -385,7 +538,8 @@ const CM = 37.795;
 const cm = v => v * CM;
 
 // ─── CALCULAR TAMAÑO DE TEXTO ÓPTIMO ───
-function fitTextSize(text, widthPx, heightPx) {
+function fitTextSize(text, widthPx, heightPx, fontFamily) {
+  fontFamily = fontFamily || "'Segoe UI', system-ui, sans-serif";
   // Empezamos grande y reducimos hasta que quepa
   const maxFontSize = Math.min(widthPx, heightPx) * 0.85;
   const minFontSize = 6;
@@ -401,7 +555,7 @@ function fitTextSize(text, widthPx, heightPx) {
   const ctx = fitTextSize._canvas.getContext('2d');
 
   for (let size = maxFontSize; size >= minFontSize; size -= 0.5) {
-    ctx.font = `bold ${size}px 'Segoe UI', system-ui, sans-serif`;
+    ctx.font = `bold ${size}px ${fontFamily}`;
     const words = text.split(/\s+/);
     let lines = [];
     let line = '';
@@ -477,6 +631,7 @@ function generate() {
   const offX    = parseFloat(document.getElementById('offsetX').value);
   const offY    = parseFloat(document.getElementById('offsetY').value);
   const rawContent = document.getElementById('content').value;
+  const fontFamily = document.getElementById('fontSelect').value;
 
   const stickersPerSheet = cols * rows;
   const items = parseContent(rawContent);
@@ -566,11 +721,12 @@ function generate() {
           } else {
             // Texto normal
             const text = item.data;
-            const fontSize = fitTextSize(text, sWpx, sHpx) * scale;
+            const fontSize = fitTextSize(text, sWpx, sHpx, fontFamily) * scale;
 
             const span = document.createElement('div');
             span.className = 'sticker-text';
             span.style.fontSize = fontSize + 'px';
+            span.style.fontFamily = fontFamily;
             span.textContent = text;
             sticker.appendChild(span);
           }
@@ -603,6 +759,277 @@ function generate() {
   document.getElementById('btnPrint').style.display = 'block';
 }
 
+// ─── DETECTAR FUENTES INSTALADAS EN LA COMPUTADORA ───
+async function loadSystemFonts() {
+  const select = document.getElementById('fontSelect');
+  const hint = document.getElementById('fontHint');
+
+  if (!('queryLocalFonts' in window)) {
+    hint.textContent = 'Tu navegador no soporta la Local Font Access API (funciona en Chrome/Edge sobre HTTPS o localhost). Se mantiene la lista genérica de fuentes.';
+    return;
+  }
+
+  try {
+    const fontData = await window.queryLocalFonts();
+    const families = [...new Set(fontData.map(f => f.family))].sort((a, b) => a.localeCompare(b));
+
+    if (families.length === 0) {
+      hint.textContent = 'No se encontraron fuentes instaladas.';
+      return;
+    }
+
+    const previousValue = select.value;
+    select.innerHTML = '';
+    for (const fam of families) {
+      const opt = document.createElement('option');
+      // Comillas para nombres con espacios + fallback genérico
+      const safeFam = /\s/.test(fam) ? `'${fam}'` : fam;
+      opt.value = `${safeFam}, sans-serif`;
+      opt.textContent = fam;
+      select.appendChild(opt);
+    }
+
+    hint.textContent = `${families.length} fuentes instaladas detectadas y cargadas.`;
+    generate();
+  } catch (e) {
+    hint.textContent = 'No se pudo acceder a las fuentes del sistema (permiso denegado o no disponible).';
+  }
+}
+
+// ─── CONFIGURACIONES GUARDADAS (localStorage) ───
+const CONFIG_STORAGE_KEY = 'stickerSheetConfigs';
+
+// IDs de todos los campos del formulario que forman parte de una configuración
+// (se excluyen los propios controles de guardar/cargar configuraciones)
+function getConfigFieldIds() {
+  const form = document.querySelector('.config-form');
+  return [...form.querySelectorAll('input[id], select[id], textarea[id]')]
+    .map(el => el.id)
+    .filter(id => id && id !== 'configName' && id !== 'configList');
+}
+
+function loadAllConfigs() {
+  try {
+    const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveAllConfigs(configs) {
+  localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(configs));
+}
+
+function setConfigHint(message, isError) {
+  const hint = document.getElementById('configHint');
+  hint.textContent = message;
+  hint.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+}
+
+function refreshConfigList(selectName) {
+  const configs = loadAllConfigs();
+  const select = document.getElementById('configList');
+  const names = Object.keys(configs).sort((a, b) => a.localeCompare(b));
+
+  select.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = names.length
+    ? '— Selecciona una configuración —'
+    : '— No hay configuraciones guardadas —';
+  select.appendChild(placeholder);
+
+  for (const name of names) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+
+  if (selectName && names.includes(selectName)) {
+    select.value = selectName;
+  }
+}
+
+function saveCurrentConfig() {
+  const nameInput = document.getElementById('configName');
+  const name = nameInput.value.trim();
+
+  if (!name) {
+    setConfigHint('Escribe un nombre para guardar la configuración.', true);
+    return;
+  }
+
+  const data = {};
+  for (const id of getConfigFieldIds()) {
+    data[id] = document.getElementById(id).value;
+  }
+
+  const configs = loadAllConfigs();
+  const overwritten = Object.prototype.hasOwnProperty.call(configs, name);
+  configs[name] = data;
+  saveAllConfigs(configs);
+
+  refreshConfigList(name);
+  nameInput.value = '';
+  setConfigHint(overwritten ? `Configuración "${name}" actualizada.` : `Configuración "${name}" guardada.`, false);
+}
+
+function loadSelectedConfig() {
+  const select = document.getElementById('configList');
+  const name = select.value;
+
+  if (!name) {
+    setConfigHint('Selecciona una configuración de la lista.', true);
+    return;
+  }
+
+  const configs = loadAllConfigs();
+  const data = configs[name];
+  if (!data) {
+    setConfigHint('No se encontró esa configuración.', true);
+    return;
+  }
+
+  for (const [id, value] of Object.entries(data)) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+
+  setConfigHint(`Configuración "${name}" cargada.`, false);
+  generate();
+}
+
+function deleteSelectedConfig() {
+  const select = document.getElementById('configList');
+  const name = select.value;
+
+  if (!name) {
+    setConfigHint('Selecciona una configuración para eliminar.', true);
+    return;
+  }
+
+  const configs = loadAllConfigs();
+  delete configs[name];
+  saveAllConfigs(configs);
+  refreshConfigList();
+  setConfigHint(`Configuración "${name}" eliminada.`, false);
+}
+
+function exportConfigs() {
+  const configs = loadAllConfigs();
+  const names = Object.keys(configs);
+
+  if (names.length === 0) {
+    setConfigHint('No hay configuraciones para exportar.', true);
+    return;
+  }
+
+  const blob = new Blob([JSON.stringify(configs, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `stickersheet-configs-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  setConfigHint(`${names.length} configuración${names.length !== 1 ? 'es' : ''} exportada${names.length !== 1 ? 's' : ''}.`, false);
+}
+
+function triggerImport() {
+  document.getElementById('importFileInput').click();
+}
+
+function handleImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    let imported;
+    try {
+      imported = JSON.parse(reader.result);
+    } catch (err) {
+      setConfigHint('El archivo no es un JSON válido.', true);
+      e.target.value = '';
+      return;
+    }
+
+    if (typeof imported !== 'object' || imported === null || Array.isArray(imported)) {
+      setConfigHint('El archivo no tiene el formato esperado (debe ser un JSON exportado desde esta misma página).', true);
+      e.target.value = '';
+      return;
+    }
+
+    const existing = loadAllConfigs();
+    let added = 0;
+    let overwritten = 0;
+
+    for (const [name, data] of Object.entries(imported)) {
+      if (typeof data !== 'object' || data === null || Array.isArray(data)) continue;
+      if (Object.prototype.hasOwnProperty.call(existing, name)) {
+        overwritten++;
+      } else {
+        added++;
+      }
+      existing[name] = data;
+    }
+
+    saveAllConfigs(existing);
+    refreshConfigList();
+    setConfigHint(`Importación completa: ${added} nueva${added !== 1 ? 's' : ''}, ${overwritten} actualizada${overwritten !== 1 ? 's' : ''}.`, false);
+    e.target.value = '';
+  };
+
+  reader.onerror = () => {
+    setConfigHint('No se pudo leer el archivo seleccionado.', true);
+    e.target.value = '';
+  };
+
+  reader.readAsText(file);
+}
+
+function openConfigModal() {
+  document.getElementById('configModalOverlay').classList.add('open');
+  setConfigHint('', false);
+}
+
+function closeConfigModal() {
+  document.getElementById('configModalOverlay').classList.remove('open');
+}
+
+document.getElementById('btnOpenConfigModal').addEventListener('click', openConfigModal);
+document.getElementById('btnCloseConfigModal').addEventListener('click', closeConfigModal);
+
+// Cerrar al hacer click fuera del cuadro del modal
+document.getElementById('configModalOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'configModalOverlay') closeConfigModal();
+});
+
+// Cerrar con la tecla Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('configModalOverlay').classList.contains('open')) {
+    closeConfigModal();
+  }
+});
+
+document.getElementById('btnSaveConfig').addEventListener('click', saveCurrentConfig);
+document.getElementById('btnLoadConfig').addEventListener('click', loadSelectedConfig);
+document.getElementById('btnDeleteConfig').addEventListener('click', deleteSelectedConfig);
+document.getElementById('btnExportConfigs').addEventListener('click', exportConfigs);
+document.getElementById('btnImportConfigs').addEventListener('click', triggerImport);
+document.getElementById('importFileInput').addEventListener('change', handleImportFile);
+
+refreshConfigList();
+
+document.getElementById('fontSelect').addEventListener('change', generate);
+
 // ─── EVENTO SUBMIT DEL FORMULARIO ───
 document.querySelector('.config-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -612,6 +1039,7 @@ document.querySelector('.config-form').addEventListener('submit', (e) => {
 // Auto-generar al cargar con valores por defecto
 window.addEventListener('load', () => {
   document.getElementById('content').value = '6, 07\n3, QR https://ejemplo.com\n6, 05';
+  loadSystemFonts();
   generate();
 });
 </script>
